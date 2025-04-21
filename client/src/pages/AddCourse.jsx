@@ -1,53 +1,209 @@
-import { useState } from 'react';
-import { supabase } from '../supabase/client';
-import { useAdminCheck } from '../hooks/useAdminCheck';
+import { useState, useEffect } from "react";
+import { supabase } from "../supabase/client";
+import { useAdminCheck } from "../hooks/useAdminCheck";
 
 export default function AddCourse() {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [difficulty, setDifficulty] = useState('Beginner');
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [difficulty, setDifficulty] = useState("Beginner");
+  const [includeCss, setIncludeCss] = useState(false);
+  const [includeJs, setIncludeJs] = useState(false);
+  const [htmlCode, setHtmlCode] = useState("");
+  const [cssCode, setCssCode] = useState("");
+  const [jsCode, setJsCode] = useState("");
+  const [activeTab, setActiveTab] = useState("html");
+  const [srcDoc, setSrcDoc] = useState("");
+
   const isAdmin = useAdminCheck();
 
-  if (!isAdmin) return <p>⛔ You must be an admin to access this page.</p>
+  const selectedTabs = ["html", includeCss && "css", includeJs && "js"].filter(
+    Boolean
+  );
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      const fullHtml = `
+        <html>
+          <head><style>${cssCode}</style></head>
+          <body>
+            ${htmlCode}
+            <script>${jsCode}</script>
+          </body>
+        </html>
+      `;
+      setSrcDoc(fullHtml);
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, [htmlCode, cssCode, jsCode]);
 
   const handleAddCourse = async () => {
-    const { error } = await supabase.from('courses').insert([
-      { title, description, difficulty },
+    const { error } = await supabase.from("courses").insert([
+      {
+        title,
+        description,
+        difficulty,
+        html_code: htmlCode,
+        css_code: includeCss ? cssCode : null,
+        js_code: includeJs ? jsCode : null,
+      },
     ]);
 
     if (error) {
-      alert('Error adding course: ' + error.message);
+      alert("Error adding course: " + error.message);
     } else {
-      alert('Course added!');
-      setTitle('');
-      setDescription('');
-      setDifficulty('Beginner');
+      alert("Course added!");
+      setTitle("");
+      setDescription("");
+      setDifficulty("Beginner");
+      setHtmlCode("");
+      setCssCode("");
+      setJsCode("");
+      setIncludeCss(false);
+      setIncludeJs(false);
+      setActiveTab("html");
     }
   };
 
+  const renderEditor = () => {
+    switch (activeTab) {
+      case "html":
+        return (
+          <textarea
+            placeholder="HTML Code"
+            value={htmlCode}
+            onChange={(e) => setHtmlCode(e.target.value)}
+            rows={20}
+            className="w-full bg-sky-50 border p-2 resize-none"
+          />
+        );
+      case "css":
+        return (
+          <textarea
+            placeholder="CSS Code"
+            value={cssCode}
+            onChange={(e) => setCssCode(e.target.value)}
+            rows={20}
+            className="w-full bg-sky-50 border p-2 resize-none"
+          />
+        );
+      case "js":
+        return (
+          <textarea
+            placeholder="JavaScript Code"
+            value={jsCode}
+            onChange={(e) => setJsCode(e.target.value)}
+            rows={20}
+            className="w-full bg-sky-50 border p-2 resize-none"
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
+  // ✅ Only conditionally render here, after all hooks
+  if (!isAdmin) return <p>⛔ You must be an admin to access this page.</p>;
+
   return (
-    <div style={{ padding: '2rem' }}>
-      <h2>Add New Course</h2>
-      <input
-        type="text"
-        placeholder="Course Title"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-      /><br />
-      <textarea
-        placeholder="Course Description"
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-      /><br />
-      <select
-        value={difficulty}
-        onChange={(e) => setDifficulty(e.target.value)}
-      >
-        <option>Beginner</option>
-        <option>Intermediate</option>
-        <option>Advanced</option>
-      </select><br />
-      <button onClick={handleAddCourse}>Add Course</button>
+    <div className="flex gap-8 p-8 font-arial">
+      <div style={{ flex: 1 }}>
+        <h2 className="text-2xl">Add New Course</h2>
+
+        <div className="flex flex-col">
+          <input
+            type="text"
+            placeholder="Add a Title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="mb-4 border p-1 w-1/4"
+          />
+
+          <textarea
+            placeholder="Add a Description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="mb-4 border p-1 w-1/4 resize-none"
+          />
+        </div>
+
+        <div>
+          <p className="text-xl">Choose Difficulty</p>
+        <select
+          value={difficulty}
+          onChange={(e) => setDifficulty(e.target.value)}
+          className="mb-4 cursor-pointer"
+        >
+          <option>Beginner</option>
+          <option>Intermediate</option>
+          <option>Advanced</option>
+        </select>
+        </div>
+
+        <div className="mb-4">
+          <label>
+            <input type="checkbox" checked disabled /> Include HTML (Always
+            included)
+          </label>
+          <label className="ml-4">
+            <input
+              type="checkbox"
+              checked={includeCss}
+              onChange={() => setIncludeCss((prev) => !prev)}
+            />{" "}
+            Include CSS
+          </label>
+          <label className="ml-4">
+            <input
+              type="checkbox"
+              checked={includeJs}
+              onChange={() => setIncludeJs((prev) => !prev)}
+            />{" "}
+            Include JavaScript
+          </label>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex gap-4 mb-4 bg-sky-300 p-2 rounded-lg">
+            {selectedTabs.map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className="py-2 px-4 cursor-pointer rounded-lg"
+                style={{
+                  backgroundColor: tab === activeTab ? "#ccc" : "#eee",
+                }}
+              >
+                {tab.toUpperCase()}
+              </button>
+            ))}
+          </div>
+          <div className="bg-sky-300 mb-4 flex items-center p-2 rounded-lg">
+            <h3>Live Preview</h3>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          {renderEditor()}
+
+          {/* ✅ Live Preview Box */}
+          <div>
+            <iframe
+              srcDoc={srcDoc}
+              title="Live Output"
+              sandbox="allow-scripts"
+              frameBorder="0"
+              className="border w-full h-[500px] font-arial"
+            />
+          </div>
+        </div>
+
+        <button
+          onClick={handleAddCourse}
+          className="mt-4 py-3 px-6 bg-[#4CAF50] text-white border-none rounded-lg cursor-pointer"
+        >
+          ➕ Add Course
+        </button>
+      </div>
     </div>
   );
 }

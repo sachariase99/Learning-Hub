@@ -34,7 +34,7 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/admin/add-course" element={<AddCourse />} />
         <Route path="/courses" element={<Courses />} />
-        <Route path="/course/:id" element={<CourseDetail />} />
+        <Route path="/course/:courseId" element={<CourseDetail />} />
         <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/login" />} />
       </Routes>
     </>

@@ -7,7 +7,7 @@ export default function Courses() {
 
   useEffect(() => {
     const fetchCourses = async () => {
-      const { data, error } = await supabase.from('courses').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('courses').select('*').order('difficulty', { ascending: false });
       if (error) {
         console.error('Error loading courses:', error.message);
       } else {
