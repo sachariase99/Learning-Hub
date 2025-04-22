@@ -37,9 +37,8 @@ export default function CourseDetail() {
 
         // Dynamically set the available tabs based on course data
         const tabs = ["html"];
-        if (data.show_css) tabs.push("css");
-        if (data.show_js) tabs.push("js");
-
+        if (data.css_code && data.css_code.trim() !== "") tabs.push("css");
+        if (data.js_code && data.js_code.trim() !== "") tabs.push("js");
         setSelectedTabs(tabs);
       }
     };
@@ -55,8 +54,7 @@ export default function CourseDetail() {
         .from("user_progress")
         .select("completed, submitted_html, submitted_css, submitted_js")
         .eq("user_id", user.id)
-        .eq("course_id", courseId)
-        .single();
+        .eq("course_id", courseId);
 
       if (error) {
         console.error("Error checking progress:", error);
@@ -101,18 +99,18 @@ export default function CourseDetail() {
 
   const getMonacoThemeStyles = (themeName) => {
     const themeStyles = {
-      'vs-dark': `
+      "vs-dark": `
       body { background-color: #1e1e1e; color: #d4d4d4; font-family: 'Courier New', monospace; }
       code { color: #d4d4d4; font-size: 14px; }
       `,
-      'light': `
+      light: `
       body { background-color: #ffffff; color: #000000; font-family: 'Courier New', monospace; }
       code { color: #000000; font-size: 14px; }
-      `
+      `,
     };
 
-    return themeStyles[themeName] || themeStyles['vs-dark'] // Default to 'vs-dark'
-  }
+    return themeStyles[themeName] || themeStyles["vs-dark"]; // Default to 'vs-dark'
+  };
 
   if (!course) {
     return <p>Loading...</p>;
@@ -133,7 +131,7 @@ export default function CourseDetail() {
         );
       case "css":
         return (
-          <Editor 
+          <Editor
             height="500px"
             language="css"
             theme="vs-dark"
@@ -144,13 +142,13 @@ export default function CourseDetail() {
         );
       case "js":
         return (
-          <Editor 
-          height="500px"
-          language="js"
-          theme="vs-dark"
-          value={jsCode}
-          onChange={(value) => setJsCode(value || "")}
-          options={{ automaticLayout: true}}
+          <Editor
+            height="500px"
+            language="javascript"
+            theme="vs-dark"
+            value={jsCode}
+            onChange={(value) => setJsCode(value || "")}
+            options={{ automaticLayout: true }}
           />
         );
       default:
