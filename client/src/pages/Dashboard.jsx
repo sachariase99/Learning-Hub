@@ -11,7 +11,7 @@ export default function Dashboard() {
     const fetchProgress = async () => {
       const { data, error } = await supabase
         .from('user_progress')
-        .select('completed, course_id, courses ( title )')
+        .select('completed, course_id, courses(title)')
         .eq('user_id', user.id);
 
       if (!error) setProgress(data);
