@@ -115,7 +115,7 @@ export default function AddCourse() {
         return (
           <Editor 
           height="500px"
-          language="js"
+          language="javascript"
           theme="vs-dark"
           value={jsCode}
           onChange={(value) => setJsCode(value || "")}
