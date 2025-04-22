@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "../supabase/client";
 import { useUser } from "@supabase/auth-helpers-react";
+import Editor from "@monaco-editor/react";
 
 export default function CourseDetail() {
   const user = useUser();
@@ -13,6 +14,7 @@ export default function CourseDetail() {
   const [srcDoc, setSrcDoc] = useState("");
   const [activeTab, setActiveTab] = useState("html"); // Default to "html"
   const [selectedTabs, setSelectedTabs] = useState(["html"]); // Default to just HTML tab
+  const [theme, setTheme] = useState("vs-dark");
 
   // Check if the course is completed by the user
   const [isCourseCompleted, setIsCourseCompleted] = useState(false);
@@ -46,19 +48,28 @@ export default function CourseDetail() {
   }, [courseId, user]);
 
   useEffect(() => {
-    // Check if the course is already marked as completed by the user
     const checkProgress = async () => {
-      if (user) {
-        const { data, error } = await supabase
-          .from("user_progress")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("course_id", courseId)
-          .single();
+      if (!user) return;
 
-        if (data) {
-          setIsCourseCompleted(data.status === "completed");
-        }
+      const { data, error } = await supabase
+        .from("user_progress")
+        .select("completed, submitted_html, submitted_css, submitted_js")
+        .eq("user_id", user.id)
+        .eq("course_id", courseId)
+        .single();
+
+      if (error) {
+        console.error("Error checking progress:", error);
+        return;
+      }
+
+      if (data) {
+        setIsCourseCompleted(data.completed);
+
+        // 👇 Load the user's submitted code into the editor if exists
+        if (data.submitted_html) setHtmlCode(data.submitted_html);
+        if (data.submitted_css) setCssCode(data.submitted_css);
+        if (data.submitted_js) setJsCode(data.submitted_js);
       }
     };
 
@@ -70,9 +81,14 @@ export default function CourseDetail() {
     const timeout = setTimeout(() => {
       const fullHtml = `
         <html>
-          <head><style>${cssCode}</style></head>
+          <head>
+            <style>
+              ${getMonacoThemeStyles(theme)}
+            </style
+          </head>
           <body>
             ${htmlCode}
+            <style>${cssCode}</style>
             <script>${jsCode}</script>
           </body>
         </html>
@@ -81,7 +97,22 @@ export default function CourseDetail() {
     }, 300);
 
     return () => clearTimeout(timeout);
-  }, [htmlCode, cssCode, jsCode]);
+  }, [htmlCode, cssCode, jsCode, theme]);
+
+  const getMonacoThemeStyles = (themeName) => {
+    const themeStyles = {
+      'vs-dark': `
+      body { background-color: #1e1e1e; color: #d4d4d4; font-family: 'Courier New', monospace; }
+      code { color: #d4d4d4; font-size: 14px; }
+      `,
+      'light': `
+      body { background-color: #ffffff; color: #000000; font-family: 'Courier New', monospace; }
+      code { color: #000000; font-size: 14px; }
+      `
+    };
+
+    return themeStyles[themeName] || themeStyles['vs-dark'] // Default to 'vs-dark'
+  }
 
   if (!course) {
     return <p>Loading...</p>;
@@ -91,32 +122,35 @@ export default function CourseDetail() {
     switch (activeTab) {
       case "html":
         return (
-          <textarea
-            placeholder="HTML Code"
+          <Editor
+            height="500px"
+            language="html"
+            theme="vs-dark"
             value={htmlCode}
-            onChange={(e) => setHtmlCode(e.target.value)}
-            rows={20}
-            className="w-full bg-sky-50 border p-2 resize-none"
+            onChange={(value) => setHtmlCode(value || "")}
+            options={{ automaticLayout: true }}
           />
         );
       case "css":
         return (
-          <textarea
-            placeholder="CSS Code"
+          <Editor 
+            height="500px"
+            language="css"
+            theme="vs-dark"
             value={cssCode}
-            onChange={(e) => setCssCode(e.target.value)}
-            rows={20}
-            className="w-full bg-sky-50 border p-2 resize-none"
+            onChange={(value) => setCssCode(value || "")}
+            options={{ automaticLayout: true }}
           />
         );
       case "js":
         return (
-          <textarea
-            placeholder="JavaScript Code"
-            value={jsCode}
-            onChange={(e) => setJsCode(e.target.value)}
-            rows={20}
-            className="w-full bg-sky-50 border p-2 resize-none"
+          <Editor 
+          height="500px"
+          language="js"
+          theme="vs-dark"
+          value={jsCode}
+          onChange={(value) => setJsCode(value || "")}
+          options={{ automaticLayout: true}}
           />
         );
       default:
@@ -127,22 +161,22 @@ export default function CourseDetail() {
   const handleSubmitProgress = async () => {
     if (!user) return;
 
-    // Check if the user has already marked the course as completed
-    const { data, error } = await supabase
-      .from("user_progress")
-      .upsert([
-        {
-          user_id: user.id,
-          course_id: courseId,
-          status: "completed",
-        },
-      ]);
+    const { data, error } = await supabase.from("user_progress").upsert([
+      {
+        user_id: user.id,
+        course_id: courseId,
+        completed: true,
+        submitted_html: htmlCode,
+        submitted_css: cssCode,
+        submitted_js: jsCode,
+      },
+    ]);
 
     if (error) {
       console.error("Error submitting progress:", error);
     } else {
       setIsCourseCompleted(true);
-      alert("Course marked as completed!");
+      alert("Course marked as completed with your submitted code!");
     }
   };
 
@@ -173,9 +207,7 @@ export default function CourseDetail() {
 
       <div className="grid grid-cols-2 gap-4">
         {/* Only render the editor for the active tab */}
-        <div>
-          {renderEditor()}
-        </div>
+        <div>{renderEditor()}</div>
 
         {/* ✅ Live Preview Box */}
         <div>

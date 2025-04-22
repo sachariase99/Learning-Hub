@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../supabase/client";
 import { useAdminCheck } from "../hooks/useAdminCheck";
+import Editor from '@monaco-editor/react'
 
 export default function AddCourse() {
   const [title, setTitle] = useState("");
@@ -13,6 +14,7 @@ export default function AddCourse() {
   const [jsCode, setJsCode] = useState("");
   const [activeTab, setActiveTab] = useState("html");
   const [srcDoc, setSrcDoc] = useState("");
+  const [theme, setTheme] = useState("vs-dark");
 
   const isAdmin = useAdminCheck();
 
@@ -24,9 +26,14 @@ export default function AddCourse() {
     const timeout = setTimeout(() => {
       const fullHtml = `
         <html>
-          <head><style>${cssCode}</style></head>
+          <head>
+            <style>
+              ${getMonacoThemeStyles(theme)}
+            </style
+          </head>
           <body>
             ${htmlCode}
+            <style>${cssCode}</style>
             <script>${jsCode}</script>
           </body>
         </html>
@@ -35,7 +42,22 @@ export default function AddCourse() {
     }, 300);
 
     return () => clearTimeout(timeout);
-  }, [htmlCode, cssCode, jsCode]);
+  }, [htmlCode, cssCode, jsCode, theme]);
+
+  const getMonacoThemeStyles = (themeName) => {
+    const themeStyles = {
+      'vs-dark': `
+      body { background-color: #1e1e1e; color: #d4d4d4; font-family: 'Courier New', monospace; }
+      code { color: #d4d4d4; font-size: 14px; }
+      `,
+      'light': `
+      body { background-color: #ffffff; color: #000000; font-family: 'Courier New', monospace; }
+      code { color: #000000; font-size: 14px; }
+      `
+    };
+
+    return themeStyles[themeName] || themeStyles['vs-dark'] // Default to 'vs-dark'
+  }
 
   const handleAddCourse = async () => {
     const { error } = await supabase.from("courses").insert([
@@ -69,32 +91,35 @@ export default function AddCourse() {
     switch (activeTab) {
       case "html":
         return (
-          <textarea
-            placeholder="HTML Code"
+          <Editor
+            height="500px"
+            language="html"
+            theme="vs-dark"
             value={htmlCode}
-            onChange={(e) => setHtmlCode(e.target.value)}
-            rows={20}
-            className="w-full bg-sky-50 border p-2 resize-none"
+            onChange={(value) => setHtmlCode(value || "")}
+            options={{ automaticLayout: true }}
           />
         );
       case "css":
         return (
-          <textarea
-            placeholder="CSS Code"
+          <Editor 
+            height="500px"
+            language="css"
+            theme="vs-dark"
             value={cssCode}
-            onChange={(e) => setCssCode(e.target.value)}
-            rows={20}
-            className="w-full bg-sky-50 border p-2 resize-none"
+            onChange={(value) => setCssCode(value || "")}
+            options={{ automaticLayout: true }}
           />
         );
       case "js":
         return (
-          <textarea
-            placeholder="JavaScript Code"
-            value={jsCode}
-            onChange={(e) => setJsCode(e.target.value)}
-            rows={20}
-            className="w-full bg-sky-50 border p-2 resize-none"
+          <Editor 
+          height="500px"
+          language="js"
+          theme="vs-dark"
+          value={jsCode}
+          onChange={(value) => setJsCode(value || "")}
+          options={{ automaticLayout: true}}
           />
         );
       default:
